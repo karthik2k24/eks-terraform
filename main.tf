@@ -152,12 +152,12 @@ resource "aws_eks_addon" "vpc_cni_addon" {
 resource "aws_eks_addon" "coredns_addon" {
   cluster_name                = aws_eks_cluster.terraform_cluster.name
   addon_name                  = "coredns"
-  addon_version               = "v1.11.3-eksbuild.1"
+  addon_version               = "v1.11.1-eksbuild.11"
   resolve_conflicts_on_update = "PRESERVE"
 }
 
 resource "aws_eks_addon" "kubeproxy_addon" {
   cluster_name       = aws_eks_cluster.terraform_cluster.name
   addon_name         = "kube-proxy"
-  addon_version = "v1.29.1-eksbuild.2"
+  addon_version = "v1.30.0-eksbuild.3"
 }

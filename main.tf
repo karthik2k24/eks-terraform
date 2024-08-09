@@ -1,12 +1,40 @@
 provider "aws" {
   region = "us-east-1"
 }
+data "aws_caller_identity" "current" {}
 
+resource "aws_vpc" "my_vpc" {
+  cidr_block = "10.0.0.0/16"
+
+  tags = {
+    Name = "my_vpc"
+  }
+}
+# List of availability zones and corresponding CIDR blocks
+locals {
+  availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
+  subnet_cidrs       = ["10.0.0.0/20", "10.0.16.0/20", "10.0.32.0/20"]
+}
+
+# Subnets in each availability zone
+resource "aws_subnet" "my_subnets" {
+  for_each          = zipmap(local.availability_zones, local.subnet_cidrs)
+  vpc_id            = aws_vpc.my_vpc.id
+  cidr_block        = each.value
+  availability_zone = each.key
+
+  tags = {
+    Name = "subnet-${each.key}"
+  }
+}
+output "aws_account_id" {
+  value = data.aws_caller_identity.current.account_id
+}
 resource "aws_eks_cluster" "terraform_cluster" {
   name     = "terraform-training-cluster"
   role_arn = aws_iam_role.terraform_cluster_role.arn
   vpc_config {
-    subnet_ids = ["subnet-045c906106486c53c", "subnet-08d22b6dfa0eaf3cb", "subnet-016ad0ad7d5ebbc8d"]
+    subnet_ids = [for subnet in aws_subnet.my_subnets : subnet.id]
   }
   depends_on = [
     aws_iam_role.terraform_cluster_role
@@ -17,7 +45,7 @@ resource "aws_eks_node_group" "terraform_nodegroup" {
   cluster_name    = aws_eks_cluster.terraform_cluster.name
   node_group_name = "terraform-node-group"
   node_role_arn   = aws_iam_role.terraform_node_role.arn
-  subnet_ids      = ["subnet-045c906106486c53c", "subnet-08d22b6dfa0eaf3cb", "subnet-016ad0ad7d5ebbc8d"]
+  subnet_ids = [for subnet in aws_subnet.my_subnets : subnet.id]
   launch_template {
     id      = aws_launch_template.eks_nodes.id
     version = "$Latest"
@@ -71,11 +99,11 @@ resource "aws_iam_role" "terraform_node_role" {
 }
 
 resource "aws_launch_template" "eks_nodes" {
-  instance_type = "m5.large"
+  instance_type = "t2.micro"
   tag_specifications {
     resource_type = "instance"
     tags = {
-      "Name" = aws_eks_cluster.terraform_cluster.name
+      "Name" = "${aws_eks_cluster.terraform_cluster.name}-node"
     }
   }
 }
@@ -124,7 +152,7 @@ resource "aws_eks_addon" "vpc_cni_addon" {
 resource "aws_eks_addon" "coredns_addon" {
   cluster_name                = aws_eks_cluster.terraform_cluster.name
   addon_name                  = "coredns"
-  addon_version               = "v1.11.1-eksbuild.6"
+  addon_version               = "v1.11.3-eksbuild.1"
   resolve_conflicts_on_update = "PRESERVE"
 }
 

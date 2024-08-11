@@ -126,10 +126,10 @@ resource "aws_iam_role_policy_attachment" "terraform_cluster_role-AmazonEKS_CNI_
   role       = aws_iam_role.terraform_node_role.name
 }
 
-#resource "aws_iam_role_policy_attachment" "terraform_cluster_role-AmazonEC2ContainerRegistryReadOnly" {
-#  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-#  role       = aws_iam_role.terraform_node_role.name
-#}
+resource "aws_iam_role_policy_attachment" "terraform_cluster_role-AmazonEC2ContainerRegistryReadOnly" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.terraform_node_role.name
+}
 
 
 resource "aws_iam_role_policy_attachment" "terraform_cluster_role-AmazonEKSClusterPolicy" {
@@ -149,6 +149,12 @@ resource "aws_eks_addon" "vpc_cni_addon" {
   addon_name   = "vpc-cni"
 }
 
+resource "aws_eks_addon" "coredns_addon" {
+  cluster_name                = aws_eks_cluster.terraform_cluster.name
+  addon_name                  = "coredns"
+  addon_version               = "v1.11.1-eksbuild.6"
+  resolve_conflicts_on_update = "PRESERVE"
+}
 
 resource "aws_eks_addon" "kubeproxy_addon" {
   cluster_name       = aws_eks_cluster.terraform_cluster.name

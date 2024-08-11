@@ -150,7 +150,7 @@ resource "aws_eks_addon" "vpc_cni_addon" {
 resource "aws_eks_addon" "coredns_addon" {
   cluster_name                = aws_eks_cluster.terraform_cluster.name
   addon_name                  = "coredns"
-  addon_version               = "v1.11.1-eksbuild.6"
+  addon_version               = "v1.11.1-eksbuild.1"
   resolve_conflicts_on_update = "PRESERVE"
 
   depends_on = [

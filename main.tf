@@ -38,13 +38,82 @@ resource "aws_eks_cluster" "terraform_cluster" {
   name     = "terraform-training-cluster"
   role_arn = aws_iam_role.terraform_cluster_role.arn
   vpc_config {
+    security_group_ids      = [aws_security_group.eks_cluster.id, aws_security_group.eks_nodes.id]
     subnet_ids = [for subnet in aws_subnet.my_subnets : subnet.id]
   }
-
+  version = 1.29
   depends_on = [
     aws_iam_role.terraform_cluster_role
   ]
 }
+
+resource "aws_security_group" "eks_cluster" {
+  name        = "terraform-training-cluster/ControlPlaneSecurityGroup"
+  description = "Communication between the control plane and worker nodegroups"
+  vpc_id      = aws_vpc.my_vpc.id
+}
+
+resource "aws_security_group" "eks_nodes" {
+  name        = "terraform-training-cluster/ClusterSharedNodeSecurityGroup"
+  description = "Communication between all nodes in the cluster"
+  vpc_id            = aws_vpc.my_vpc.id
+
+
+  ingress {
+    description = "Node to node CoreDNS"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "tcp"
+    self        = true
+  }
+
+  ingress {
+    description = "Node to node CoreDNS (UDP)"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    self        = true
+  }
+
+  egress {
+    description = "Node to node CoreDNS"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "tcp"
+    self        = true
+  }
+  egress {
+    description = "Node to node CoreDNS (UDP)"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    self        = true
+  }
+
+  egress {
+    description = "Egress all HTTPS to internet"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Egress NTP/TCP to internet"
+    from_port   = 123
+    to_port     = 123
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    description = "Egress NTP/UDP to internet"
+    from_port   = 123
+    to_port     = 123
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 
 resource "aws_eks_node_group" "terraform_nodegroup" {
   cluster_name    = aws_eks_cluster.terraform_cluster.name
@@ -56,10 +125,11 @@ resource "aws_eks_node_group" "terraform_nodegroup" {
     version = "$Latest"
   }
   scaling_config {
-    desired_size = 1
-    max_size     = 2
-    min_size     = 1
+    desired_size = 2
+    max_size     = 3
+    min_size     = 2
   }
+  capacity_type = "SPOT"
 
   depends_on = [
     aws_eks_cluster.terraform_cluster,
@@ -106,9 +176,6 @@ resource "aws_iam_role" "terraform_node_role" {
 
 resource "aws_launch_template" "eks_nodes" {
   instance_type = "t2.micro"
-  instance_market_options {
-    market_type = "spot"
-  }
   tag_specifications {
     resource_type = "instance"
     tags = {

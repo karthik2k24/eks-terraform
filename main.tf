@@ -100,11 +100,15 @@ resource "aws_iam_role" "terraform_node_role" {
       }
     ]
   })
+
 }
+
 
 resource "aws_launch_template" "eks_nodes" {
   instance_type = "t2.micro"
-
+  instance_market_options {
+    market_type = "spot"
+  }
   tag_specifications {
     resource_type = "instance"
     tags = {

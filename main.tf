@@ -41,7 +41,7 @@ resource "aws_eks_cluster" "terraform_cluster" {
     security_group_ids      = [aws_security_group.eks_cluster.id, aws_security_group.eks_nodes.id]
     subnet_ids = [for subnet in aws_subnet.my_subnets : subnet.id]
   }
-  version = 1.29
+  version = 1.30
   depends_on = [
     aws_iam_role.terraform_cluster_role
   ]
@@ -221,7 +221,7 @@ resource "aws_eks_addon" "vpc_cni_addon" {
 resource "aws_eks_addon" "coredns_addon" {
   cluster_name                = aws_eks_cluster.terraform_cluster.name
   addon_name                  = "coredns"
-  addon_version               = "v1.10.1-eksbuild.1"
+  addon_version               = "v1.11.1-eksbuild.6"
   resolve_conflicts_on_update = "OVERWRITE"
 
   depends_on = [

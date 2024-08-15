@@ -5,17 +5,17 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 
 resource "aws_vpc" "my_vpc" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block = "172.16.0.0/16"
 
   tags = {
-    Name = "my_vpc"
+    Name = "my_terraform_vpc"
   }
 }
 
 # List of availability zones and corresponding CIDR blocks
 locals {
   availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
-  subnet_cidrs       = ["10.0.0.0/20", "10.0.16.0/20", "10.0.32.0/20"]
+  subnet_cidrs       = ["172.16.1.0/24", "172.16.2.0/24", "172.16.3.0/24"]
 }
 
 # Subnets in each availability zone
@@ -56,9 +56,9 @@ resource "aws_eks_node_group" "terraform_nodegroup" {
     version = "$Latest"
   }
   scaling_config {
-    desired_size = 2
-    max_size     = 4
-    min_size     = 2
+    desired_size = 1
+    max_size     = 2
+    min_size     = 1
   }
 
   depends_on = [
@@ -150,11 +150,11 @@ resource "aws_eks_addon" "vpc_cni_addon" {
 resource "aws_eks_addon" "coredns_addon" {
   cluster_name                = aws_eks_cluster.terraform_cluster.name
   addon_name                  = "coredns"
-  addon_version               = "v1.11.1-eksbuild.9"
-  resolve_conflicts_on_update = "PRESERVE"
+  addon_version               = "v1.10.1-eksbuild.1"
+  resolve_conflicts_on_update = "OVERWRITE"
 
   depends_on = [
-    aws_eks_cluster.terraform_cluster
+    aws_eks_node_group.terraform_nodegroup
   ]
 }
 
